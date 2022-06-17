@@ -7,7 +7,7 @@ from sprint1.sprint1_stack import Sprint1Stack
 
 
 app = cdk.App()
-Sprint1Stack(app, "Sprint1Stack",
+Sprint1Stack(app, "HassanSprint1Stack",
     # If you don't specify 'env', this stack will be environment-agnostic.
     # Account/Region-dependent features and context lookups will not work,
     # but a single synthesized template can be deployed anywhere.
