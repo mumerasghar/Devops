@@ -12,17 +12,17 @@
           "version": "10.1.42"
         }
       },
-      "Sprint1Stack": {
-        "id": "Sprint1Stack",
-        "path": "Sprint1Stack",
+      "mumer-Sprint1Stack": {
+        "id": "mumer-Sprint1Stack",
+        "path": "mumer-Sprint1Stack",
         "children": {
           "CDKMetadata": {
             "id": "CDKMetadata",
-            "path": "Sprint1Stack/CDKMetadata",
+            "path": "mumer-Sprint1Stack/CDKMetadata",
             "children": {
               "Default": {
                 "id": "Default",
-                "path": "Sprint1Stack/CDKMetadata/Default",
+                "path": "mumer-Sprint1Stack/CDKMetadata/Default",
                 "constructInfo": {
                   "fqn": "aws-cdk-lib.CfnResource",
                   "version": "2.28.1"
@@ -30,7 +30,7 @@
               },
               "Condition": {
                 "id": "Condition",
-                "path": "Sprint1Stack/CDKMetadata/Condition",
+                "path": "mumer-Sprint1Stack/CDKMetadata/Condition",
                 "constructInfo": {
                   "fqn": "aws-cdk-lib.CfnCondition",
                   "version": "2.28.1"
