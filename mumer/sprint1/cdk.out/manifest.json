@@ -23,7 +23,7 @@
         "validateOnSynth": false,
         "assumeRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-deploy-role-${AWS::AccountId}-${AWS::Region}",
         "cloudFormationExecutionRoleArn": "arn:${AWS::Partition}:iam::${AWS::AccountId}:role/cdk-hnb659fds-cfn-exec-role-${AWS::AccountId}-${AWS::Region}",
-        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/cfae6a6998e6349027c733bada442f5c9f3e128ef339ce1afa4c5044e042a43d.json",
+        "stackTemplateAssetObjectUrl": "s3://cdk-hnb659fds-assets-${AWS::AccountId}-${AWS::Region}/4449b4e79ce51922478088ada3d5403352c422ffc800048dbc82d4a078c85fc5.json",
         "requiresBootstrapStackVersion": 6,
         "bootstrapStackVersionSsmParameter": "/cdk-bootstrap/hnb659fds/version",
         "additionalDependencies": [
@@ -39,6 +39,18 @@
         "mumer-Sprint1Stack.assets"
       ],
       "metadata": {
+        "/mumer-Sprint1Stack/MyFirstLambda/ServiceRole/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MyFirstLambdaServiceRole67C53328"
+          }
+        ],
+        "/mumer-Sprint1Stack/MyFirstLambda/Resource": [
+          {
+            "type": "aws:cdk:logicalId",
+            "data": "MyFirstLambdaCD500812"
+          }
+        ],
         "/mumer-Sprint1Stack/CDKMetadata/Default": [
           {
             "type": "aws:cdk:logicalId",
