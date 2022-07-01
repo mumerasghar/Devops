@@ -39,7 +39,7 @@ class Sprint3Stack(Stack):
         # ? Using aws inbuild metrics for monitoring.
         invocations_alarm = self.create_alarm(
             name="mumer_appHealthAlarm_",
-            threshold=1000,
+            threshold=5,
             evaluation_periods=1,
             dimension={"FunctionName": hw_lambda.function_name},
             metric_name="Invocations",
