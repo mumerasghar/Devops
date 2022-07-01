@@ -37,25 +37,52 @@ class Sprint3Stack(Stack):
         hw_lambda.apply_removal_policy(RemovalPolicy.DESTROY)
 
         # ? Using aws inbuild metrics for monitoring.
-        invocations_alarm = self.create_alarm(
-            name="mumer_appHealthAlarm_",
-            threshold=5,
-            evaluation_periods=1,
-            dimension={"FunctionName": hw_lambda.function_name},
-            metric_name="Invocations",
-            namespace="AWS/Lambda",
-            comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD
+        hw_duration = hw_lambda.metric(
+            "Duration",
+            period=Duration_.minutes(60)
+        )
+        hw_invocations = hw_lambda.metric(
+            "Invocation",
+            period=Duration_.minutes(60)
         )
 
-        duration_alarm = self.create_alarm(
-            name="mumer_appHealthAlarm_",
-            threshold=200,
+        hw_duration_alarm = cloudwatch_.Alarm(
+            self,
+            "wh_lambda_alarm_duration",
+            threshold=4750,  # in milliseconds
             evaluation_periods=1,
-            dimension={"FunctionName": hw_lambda.function_name},
-            metric_name="Duration",
-            namespace="AWS/Lambda",
-            comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD
+            metric=hw_duration
         )
+        hw_duration_alarm.apply_removal_policy(RemovalPolicy.DESTROY)
+
+        hw_invocation_alarm = cloudwatch_.Alarm(
+            self,
+            "wh_lambda_alarm_invocation",
+            threshold=1,  # in milliseconds
+            evaluation_periods=1,
+            metric=hw_invocations
+        )
+        hw_invocation_alarm.apply_removal_policy(RemovalPolicy.DESTROY)
+
+        # invocations_alarm = self.create_alarm(
+        #     name="mumer_appHealthAlarm_",
+        #     threshold=2,
+        #     evaluation_periods=1,
+        #     dimension={"FunctionName": hw_lambda.function_name},
+        #     metric_name="Invocations",
+        #     namespace="AWS/Lambda",
+        #     comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD
+        # )
+
+        # duration_alarm = self.create_alarm(
+        #     name="mumer_appHealthAlarm_",
+        #     threshold=4750,  # this is in milliseconds
+        #     evaluation_periods=1,
+        #     dimension={"FunctionName": hw_lambda.function_name},
+        #     metric_name="Duration",
+        #     namespace="AWS/Lambda",
+        #     comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD
+        # )
 
         # ? https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_events/Schedule.html
         schedule = events_.Schedule.cron(minute="1")
@@ -115,6 +142,7 @@ class Sprint3Stack(Stack):
         )
 
         table = self.create_table()
+        table.apply_removal_policy(RemovalPolicy.DESTROY)
 
         db_lambda.add_environment("TABLE_NAME", table.table_name)
 
@@ -148,9 +176,11 @@ class Sprint3Stack(Stack):
             self,
             "mumer-WH-Deployment",
             alias=alias,
-            alarms=[invocations_alarm],
+            alarms=[hw_invocation_alarm, hw_duration_alarm],
             deployment_config=codedeploy_.LambdaDeploymentConfig.LINEAR_10_PERCENT_EVERY_1_MINUTE,
         )
+        deployment_group.apply_removal_policy(RemovalPolicy.DESTROY)
+        
 
     def create_lambda(self, _id, _path, _handler, _role):
         return lambda_.Function(
@@ -193,7 +223,7 @@ class Sprint3Stack(Stack):
             metric_name=metric_name,
             namespace=namespace,
             dimensions_map=dimension,
-            period=Duration_.minutes(1)
+            period=Duration_.minutes(60)
         )
 
     def create_alarm(

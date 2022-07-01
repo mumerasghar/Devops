@@ -1,6 +1,7 @@
 from aws_cdk import(
     Stack,
     pipelines as pipelines_,
+    RemovalPolicy,
     aws_codepipeline_actions as pipelineactions_
 )
 
@@ -34,16 +35,15 @@ class MyPipeLineStack(Stack):
         code_pipeline = pipelines_.CodePipeline(
             self,
             "mumer-pipeline",
-            synth=synth
+            synth=synth,
         )
-
         unit_test = pipelines_.ShellStep(
             "UnitTesting",
             input=source,
             commands=[
                 "cd mumer/sprint3/",
                 "pip install -r requirements.txt -r requirements-dev.txt",
-                "pytest" 
+                "pytest"
             ]
         )
 
@@ -53,12 +53,10 @@ class MyPipeLineStack(Stack):
                 unit_test
             ]
         )
-         
-        code_pipeline.add_stage(
-            MyStage(self, "mumer-prodstage"),
-            pre=[
-                pipelines_.ManualApprovalStep("Pre-Stack Check")
-            ]
-        )
 
-    
+        # code_pipeline.add_stage(
+        #     MyStage(self, "mumer-prodstage"),
+        #     pre=[
+        #         pipelines_.ManualApprovalStep("Pre-Stack Check")
+        #     ]
+        # )
