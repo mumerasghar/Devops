@@ -47,15 +47,15 @@ class Sprint3Stack(Stack):
             comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD
         )
 
-        # duration_alarm = self.create_alarm(
-        #     name="mumer_appHealthAlarm_",
-        #     threshold=200,
-        #     evaluation_periods=1,
-        #     dimension={"FunctionName": hw_lambda.function_name},
-        #     metric_name="Duration",
-        #     namespace="AWS/Lambda",
-        #     comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD
-        # )
+        duration_alarm = self.create_alarm(
+            name="mumer_appHealthAlarm_",
+            threshold=200,
+            evaluation_periods=1,
+            dimension={"FunctionName": hw_lambda.function_name},
+            metric_name="Duration",
+            namespace="AWS/Lambda",
+            comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD
+        )
 
         # ? https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_events/Schedule.html
         schedule = events_.Schedule.cron(minute="1")
@@ -148,7 +148,7 @@ class Sprint3Stack(Stack):
             self,
             "mumer-WH-Deployment",
             alias=alias,
-            # alarms=[],
+            alarms=[invocations_alarm],
             deployment_config=codedeploy_.LambdaDeploymentConfig.LINEAR_10_PERCENT_EVERY_1_MINUTE,
         )
 
