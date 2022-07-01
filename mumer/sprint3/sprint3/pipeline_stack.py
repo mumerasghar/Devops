@@ -28,7 +28,7 @@ class MyPipeLineStack(Stack):
                 "pip install -r requirements.txt",
                 "cdk synth"
             ],
-            primary_output_directory="Pegasus_Python/sprint3/cdk.out"
+            primary_output_directory="mumer/sprint3/cdk.out"
         )
 
         code_pipeline = pipelines_.CodePipeline(
