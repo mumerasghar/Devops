@@ -23,7 +23,8 @@ class MyPipeLineStack(Stack):
             "CodeBuild",
             input=source,
             commands=[
-                'cd  Pegasus_Python/mumer/sprint3',
+                'cd  mumer/sprint3/',
+                'npm install -g aws-cdk',
                 "pip install -r requirements.txt",
                 "cdk synth"
             ],
@@ -40,7 +41,7 @@ class MyPipeLineStack(Stack):
             "UnitTesting",
             input=source,
             commands=[
-                "cd Pegasus_Python/mumer/sprint3/",
+                "cd mumer/sprint3/",
                 "pip install -r requirements.txt -r requirements-dev.txt",
                 "pytest" 
             ]
