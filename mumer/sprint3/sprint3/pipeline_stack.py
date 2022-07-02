@@ -37,6 +37,7 @@ class MyPipeLineStack(Stack):
             "mumer-pipeline",
             synth=synth,
         )
+
         unit_test = pipelines_.ShellStep(
             "UnitTesting",
             input=source,
@@ -54,9 +55,11 @@ class MyPipeLineStack(Stack):
             ]
         )
 
-        # code_pipeline.add_stage(
-        #     MyStage(self, "mumer-prodstage"),
-        #     pre=[
-        #         pipelines_.ManualApprovalStep("Pre-Stack Check")
-        #     ]
-        # )
+        # Setting up manual approval for production deployment.
+        # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.pipelines/CodePipeline.html
+        code_pipeline.add_stage(
+            MyStage(self, "mumer-prodstage"),
+            pre=[
+                pipelines_.ManualApprovalStep("Prod Stage Approval")
+            ]
+        )

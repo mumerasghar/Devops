@@ -23,76 +23,26 @@ class Sprint3Stack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        # ? aws role for Cloudwatch and DynamoDB
+        # aws role for Cloudwatch and DynamoDB
         lambda_role = self.create_role()
         lambda_role.apply_removal_policy(RemovalPolicy.DESTROY)
 
-        # ? Monitoring Lambda
+        # Monitoring Lambda
         hw_lambda = self.create_lambda(
-            "MyFirstLambda",
-            "./resources/",
-            "hw_lambda.lambda_handler",
-            lambda_role
+            "MyFirstLambda", "./resources/",
+            "hw_lambda.lambda_handler", lambda_role
         )
         hw_lambda.apply_removal_policy(RemovalPolicy.DESTROY)
 
-        # ? Using aws inbuild metrics for monitoring.
-        hw_duration = hw_lambda.metric(
-            "Duration",
-            period=Duration_.minutes(60)
-        )
-        hw_invocations = hw_lambda.metric(
-            "Invocation",
-            period=Duration_.minutes(60)
-        )
-
-        hw_duration_alarm = cloudwatch_.Alarm(
-            self,
-            "wh_lambda_alarm_duration",
-            threshold=4750,  # in milliseconds
-            evaluation_periods=1,
-            metric=hw_duration
-        )
-        hw_duration_alarm.apply_removal_policy(RemovalPolicy.DESTROY)
-
-        hw_invocation_alarm = cloudwatch_.Alarm(
-            self,
-            "wh_lambda_alarm_invocation",
-            threshold=1,  # in milliseconds
-            evaluation_periods=1,
-            metric=hw_invocations
-        )
-        hw_invocation_alarm.apply_removal_policy(RemovalPolicy.DESTROY)
-
-        # invocations_alarm = self.create_alarm(
-        #     name="mumer_appHealthAlarm_",
-        #     threshold=2,
-        #     evaluation_periods=1,
-        #     dimension={"FunctionName": hw_lambda.function_name},
-        #     metric_name="Invocations",
-        #     namespace="AWS/Lambda",
-        #     comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD
-        # )
-
-        # duration_alarm = self.create_alarm(
-        #     name="mumer_appHealthAlarm_",
-        #     threshold=4750,  # this is in milliseconds
-        #     evaluation_periods=1,
-        #     dimension={"FunctionName": hw_lambda.function_name},
-        #     metric_name="Duration",
-        #     namespace="AWS/Lambda",
-        #     comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD
-        # )
-
-        # ? https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_events/Schedule.html
+        # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_events/Schedule.html
         schedule = events_.Schedule.cron(minute="1")
 
-        # ? https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_events_targets/LambdaFunction.html
+        # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_events_targets/LambdaFunction.html
         target = target_.LambdaFunction(
             handler=hw_lambda,
         )
 
-        # ? https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_events/Rule.html
+        # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_events/Rule.html
         rule = events_.Rule(
             self,
             "LambdaEventRule",
@@ -102,7 +52,7 @@ class Sprint3Stack(Stack):
         )
         rule.apply_removal_policy(RemovalPolicy.DESTROY)
 
-        # ? creating aws topic, where we can publish events
+        # creating aws topic, where we can publish events
         topic = sns_.Topic(
             self,
             "AlarmNotification"
@@ -113,24 +63,26 @@ class Sprint3Stack(Stack):
             dimension = {"URL": url}
 
             avail_alarm = self.create_alarm(
-                name=f"mumer_appMonitorAlarm_{url}_",
+                name=f"mumer_appMonitorAlarm_avail_{url}",
                 threshold=1,
-                evaluation_periods=1,
-                dimension=dimension,
-                metric_name=constants.METRIC_AVAILABILITY,
-                namespace=constants.URL_MONITOR_NAMESPACE,
-                comparison_operator=cloudwatch_.ComparisonOperator.LESS_THAN_THRESHOLD
+                comparison_operator=cloudwatch_.ComparisonOperator.LESS_THAN_THRESHOLD,
+                metric=self.create_metric(
+                    metric_name=constants.METRIC_AVAILABILITY,
+                    namespace=constants.URL_MONITOR_NAMESPACE,
+                    dimension=dimension
+                )
             )
             avail_alarm.add_alarm_action(cw_actions_.SnsAction(topic))
 
             latency_alarm = self.create_alarm(
-                name=f"mumer_appMonitorAlarm_{url}_",
+                name=f"mumer_appMonitorAlarm_latency_{url}",
                 threshold=0.2,
-                evaluation_periods=1,
-                dimension=dimension,
-                metric_name=constants.METRIC_LATENCY,
-                namespace=constants.URL_MONITOR_NAMESPACE,
-                comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD
+                comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD,
+                metric=self.create_metric(
+                    metric_name=constants.METRIC_AVAILABILITY,
+                    namespace=constants.URL_MONITOR_NAMESPACE,
+                    dimension=dimension
+                )
             )
             latency_alarm.add_alarm_action(cw_actions_.SnsAction(topic))
 
@@ -146,23 +98,46 @@ class Sprint3Stack(Stack):
 
         db_lambda.add_environment("TABLE_NAME", table.table_name)
 
-        # ? DB Lambda Subscription to SNS Topic
-        # ? https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_sns_subscriptions/LambdaSubscription.html
+        # DB Lambda Subscription to SNS Topic
+        # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_sns_subscriptions/LambdaSubscription.html
         topic.add_subscription(
             subscriptions_.LambdaSubscription(
                 db_lambda
             )
         )
 
-        # ? https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_sns_subscriptions/EmailSubscription.html
+        # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_sns_subscriptions/EmailSubscription.html
         topic.add_subscription(
             subscriptions_.EmailSubscription(
                 "muhammad.umer.skipq@gmail.com"
             )
         )
 
-        # ? used to make sure each CDK synthesis produces a different Version
-        # ? https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_lambda/Alias.html#aws_cdk.aws_lambda.Alias
+        # Using aws inbuild metrics for monitoring.
+        hw_duration = hw_lambda.metric(
+            "Duration", period=Duration_.minutes(60)
+        )
+
+        hw_invocations = hw_lambda.metric(
+            "Invocation", period=Duration_.minutes(60)
+        )
+
+        invocations_alarm = self.create_alarm(
+            name="mumer_appHealthAlarm_invocations",
+            threshold=1,
+            comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD,
+            metric=hw_invocations,
+        )
+
+        duration_alarm = self.create_alarm(
+            name="mumer_appHealthAlarm_duration",
+            threshold=5000,  # this is in milliseconds
+            comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD,
+            metric=hw_duration,
+        )
+
+        # used to make sure each CDK synthesis produces a different Version
+        # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_lambda/Alias.html#aws_cdk.aws_lambda.Alias
         alias = lambda_.Alias(
             self,
             "WH_LambdaAlias",
@@ -170,17 +145,16 @@ class Sprint3Stack(Stack):
             version=hw_lambda.current_version
         )
 
-        # ? application deployment group configration and roll back policy.
-        # ? https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_codedeploy/LambdaDeploymentGroup.html
+        # application deployment group configration and roll back policy.
+        # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_codedeploy/LambdaDeploymentGroup.html
         deployment_group = codedeploy_.LambdaDeploymentGroup(
             self,
             "mumer-WH-Deployment",
             alias=alias,
-            alarms=[hw_invocation_alarm, hw_duration_alarm],
+            alarms=[invocations_alarm, duration_alarm],
             deployment_config=codedeploy_.LambdaDeploymentConfig.LINEAR_10_PERCENT_EVERY_1_MINUTE,
         )
         deployment_group.apply_removal_policy(RemovalPolicy.DESTROY)
-        
 
     def create_lambda(self, _id, _path, _handler, _role):
         return lambda_.Function(
@@ -226,21 +200,13 @@ class Sprint3Stack(Stack):
             period=Duration_.minutes(60)
         )
 
-    def create_alarm(
-            self, name, comparison_operator, threshold, evaluation_periods,
-            metric_name, namespace, dimension
-    ):
+    def create_alarm(self, name, comparison_operator, threshold, metric):
         alarm = cloudwatch_.Alarm(
-            self,
-            name+metric_name,
+            self, name,
             comparison_operator=comparison_operator,
             threshold=threshold,
-            evaluation_periods=evaluation_periods,
-            metric=self.create_metric(
-                metric_name,
-                namespace,
-                dimension
-            )
+            metric=metric,
+            evaluation_periods=1
         )
         alarm.apply_removal_policy(RemovalPolicy.DESTROY)
         return alarm
