@@ -7,7 +7,7 @@ from aws_cdk import(
 
 import aws_cdk as cdk
 from constructs import Construct
-from sprint3.pipeline_stage import MyStage
+from sprint4.pipeline_stage import MyStage
 
 
 class MyPipeLineStack(Stack):
@@ -24,12 +24,12 @@ class MyPipeLineStack(Stack):
             "CodeBuild",
             input=source,
             commands=[
-                'cd  mumer/sprint3/',
+                'cd  mumer/sprint4/',
                 'npm install -g aws-cdk',
                 "pip install -r requirements.txt",
                 "cdk synth"
             ],
-            primary_output_directory="mumer/sprint3/cdk.out"
+            primary_output_directory="mumer/sprint4/cdk.out"
         )
 
         code_pipeline = pipelines_.CodePipeline(
@@ -42,7 +42,7 @@ class MyPipeLineStack(Stack):
             "UnitTesting",
             input=source,
             commands=[
-                "cd mumer/sprint3/",
+                "cd mumer/sprint4/",
                 "pip install -r requirements.txt -r requirements-dev.txt",
                 "pytest"
             ]

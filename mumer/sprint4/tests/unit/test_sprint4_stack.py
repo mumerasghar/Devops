@@ -1,13 +1,13 @@
 import aws_cdk as core
 import aws_cdk.assertions as assertions
 
-from sprint3.sprint3_stack import Sprint3Stack
+from sprint4.sprint4_stack import Sprint4Stack
 import pytest
 
 @pytest.fixture
 def template():
     app = core.App()
-    stack = Sprint3Stack(app, "sprint3")
+    stack = Sprint4Stack(app, "sprint4")
     template = assertions.Template.from_stack(stack)
     return template
 
