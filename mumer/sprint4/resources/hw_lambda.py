@@ -1,69 +1,86 @@
-
 import datetime
-from urllib import response
 import urllib3
-import constants
+import boto3
+import os
+import constants as constants
+import json
+from pathlib import Path
 from CloudWatch_put_metric import CloudWatchPutMetric
+from dynamodb import DynamoDb
 
-cw = CloudWatchPutMetric()
-
-
-def create_events(metric, url, value):
-    dimension = [{'Name': 'URL', 'Value': url}]
-    cw.put_data(
-        constants.URL_MONITOR_NAMESPACE,
-        metric,
-        dimension,
-        value
-    )
+# To create boto3 dynamodb resource
+dynamodb = boto3.resource('dynamodb')
 
 
 def lambda_handler(event, context):
-    print("Hello world Lmabda")
 
-    values = {}
+    watch = CloudWatchPutMetric()
+    db = DynamoDb()
 
-    for url in constants.URLS:
-        availbility = getAvailability(url)
-        dimension = [{'Name': 'URL', 'Value': url}]
-        responseAvail = cw.put_data(
-            constants.URL_MONITOR_NAMESPACE,
-            constants.METRIC_AVAILABILITY,
-            dimension,
-            availbility
-        )
+    values = dict()
+    table_name = os.environ["TABLE_NAME"]
+    sns_topic_arn = os.environ["TOPIC_ARN"]
 
-        latency = getLatency(url)
-        responseLatency = cw.put_data(
-            constants.URL_MONITOR_NAMESPACE,
-            constants.METRIC_LATENCY,
-            dimension,
-            latency
-        )
+    result = db.read_db(table_name)
+
+    print(result)
+    lists_of_urls = result
+
+    for item in result:
+
+        avail = get_availability(item["monitor_url"])
+        latency = get_latency(item["monitor_url"])
 
         values.update({
-            url: {
-                "availability": availbility,
-                "latency": latency
+            item["monitor_url"]: {
+                'availability': avail,
+                'latency': latency
             }
         })
 
-    print(values)
+        threshold = float(item["threshold"])
+
+        dimensions = [
+            {
+                "Name": "URL",
+                "Value": item["monitor_url"]
+            },
+            {
+                "Name": "Region",
+                "Value": constants.Region
+            }]
+
+        watch.put_data(constants.Name_Space,
+                       constants.Metric_Availability, dimensions, avail)
+        watch.put_data(constants.Name_Space,
+                       constants.Metric_Latency, dimensions, latency)
+
+        watch.create_alram(item["monitor_url"] + "-Latency Alarm",
+                           "Latency Alarm for" + item["monitor_url"],
+                           constants.METRIC_LATENCY,
+                           constants.URL_MONITOR_NAMESPACE,
+                           dimensions,
+                           threshold,
+                           sns_topic_arn,
+                           period=60)
+        print(values)
     return values
 
 
-def getAvailability(url):
+def get_availability(url):
     http = urllib3.PoolManager()
     response = http.request("GET", url)
-    return 1 if response.status == 200 else 0
+    if response.status == 200:
+        return 1.0
+    else:
+        return 0.0
 
 
-def getLatency(url):
+def get_latency(url):
     http = urllib3.PoolManager()
-    before_time = datetime.datetime.now()
+    start = datetime.datetime.now()
     response = http.request("GET", url)
-    after_time = datetime.datetime.now()
-    latency = after_time - before_time
-
-    latencySec = round(latency.microseconds * .000001, 6)
-    return latencySec
+    end = datetime.datetime.now()
+    delta = end-start
+    latency_sec = round(delta.microseconds * 0.000001, 6)
+    return latency_sec

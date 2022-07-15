@@ -25,6 +25,9 @@ class Sprint4Stack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
+        table = self.create_table("Lambda_Alarm_logs", "id")
+        table.apply_removal_policy(RemovalPolicy.DESTROY)
+
         # aws role for Cloudwatch and DynamoDB
         lambda_role = self.create_role()
         lambda_role.apply_removal_policy(RemovalPolicy.DESTROY)
@@ -35,9 +38,10 @@ class Sprint4Stack(Stack):
             "hw_lambda.lambda_handler", lambda_role
         )
         hw_lambda.apply_removal_policy(RemovalPolicy.DESTROY)
+        hw_lambda.add_environment("TABLE_NAME", table.table_name)
 
         # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_events/Schedule.html
-        schedule = events_.Schedule.cron(minute="1")
+        schedule = events_.Schedule.cron(minute="0")
 
         # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_events_targets/LambdaFunction.html
         target = target_.LambdaFunction(
@@ -60,6 +64,7 @@ class Sprint4Stack(Stack):
             "AlarmNotification"
         )
         topic.apply_removal_policy(RemovalPolicy.DESTROY)
+        hw_lambda.add_environment("TOPIC_ARN", topic.topic_arn)
 
         for url in constants.URLS:
             dimension = {"URL": url}
@@ -94,9 +99,6 @@ class Sprint4Stack(Stack):
             "dynamodb_lambda.lambda_handler",
             lambda_role
         )
-
-        table = self.create_table("Lambda_Alarm_logs", "id")
-        table.apply_removal_policy(RemovalPolicy.DESTROY)
 
         db_lambda.add_environment("TABLE_NAME", table.table_name)
 
@@ -165,23 +167,30 @@ class Sprint4Stack(Stack):
         )
 
         # dynamodb table for urls
-        table = self.create_table("Url_table", "id")
-        table.apply_removal_policy(RemovalPolicy.DESTROY)
+        url_table = self.create_table("Url_table", "id")
+        url_table.apply_removal_policy(RemovalPolicy.DESTROY)
 
-        rest_api_lambda.add_environment("TABLE_NAME", table.table_name)
-        
+        rest_api_lambda.add_environment("TABLE_NAME", url_table.table_name)
+
         # constructing api gateway abstraction layer on application
         # https://docs.aws.amazon.com/cdk/api/v1/python/aws_cdk.aws_apigateway/LambdaRestApi.html
-        gateway_api = gateway_.LambdaRestApi(self, "mumer-apigateway",
-                                             handler=rest_api_lambda,
-                                             proxy=False)
+        gateway_api = gateway_.LambdaRestApi(
+            self, "mumer-apigateway",
+            handler=rest_api_lambda,
+            proxy=False,
+            endpoint_configuration=gateway_.EndpointConfiguration(
+                types=[
+                    gateway_.EndpointType.REGIONAL
+                ]
+            ))
+
         urls = gateway_api.root.add_resource("urls")
         urls.add_method("POST")
+        urls.add_method("GET")
+        urls.add_method("DELETE")
 
-        # item = urls.add_resources("{url}")
-        # item.add_method("DELETE")
-        # item.add_method("POST")
-        # item.add_method("PUT ")
+        url = urls.add_resource("{url_id}")
+        url.add_method("PATCH")
 
     def create_lambda(self, _id, _path, _handler, _role):
         return lambda_.Function(

@@ -4,6 +4,7 @@ import os
 import aws_cdk as cdk
 
 from sprint4.pipeline_stack import MyPipeLineStack
+# from sprint4.sprint4_stack import Sprint4Stack
 
 
 app = cdk.App()
