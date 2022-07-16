@@ -17,3 +17,22 @@ class CloudWatchPutMetric():
                 },
             ]
         )
+
+    def create_alram(
+            self, name, alarm_description, metricname,
+            namespace, dimensions, threshold, sns_topic_arn, period=60
+    ):
+        return self.client.put_metric_alarm(
+            AlarmName=name,
+            AlarmDescription=alarm_description,
+            ActionsEnabled=True,
+            AlarmActions=[sns_topic_arn],
+            MetricName=metricname,
+            Namespace=namespace,
+            Dimensions=dimensions,
+            Period=period,
+            EvaluationPeriods=1,
+            Threshold=threshold,
+            ComparisonOperator='GreaterThanThreshold',
+            Statistic='SampleCount'
+        )

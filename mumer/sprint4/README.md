@@ -1,34 +1,23 @@
+# Devops Sprint4
 
-# Welcome to your CDK Python project!
+Sprint3 was mostly about introduction of aws CI/CD: creating pipelines, adding application metrics and deployment groups for deployment of application.
 
-This is a blank project for CDK development with Python.
-
-The `cdk.json` file tells the CDK Toolkit how to execute your app.
-
-This project is set up like a standard Python project.  The initialization
-process also creates a virtualenv within this project, stored under the `.venv`
-directory.  To create the virtualenv it assumes that there is a `python3`
-(or `python` for Windows) executable in your path with access to the `venv`
-package. If for any reason the automatic creation of the virtualenv fails,
-you can create the virtualenv manually.
-
-To manually create a virtualenv on MacOS and Linux:
+To go forward with the work of this sprint we have used amazon cdk, it is installed using the following command
 
 ```
-$ python3 -m venv .venv
+npm install -g aws-cdk
 ```
 
-After the init process completes and the virtualenv is created, you can use the following
-step to activate your virtualenv.
+Initialization of basic project will be done using the command
+
+```
+cdk init app --language python
+```
+
+synth init will autmatically create a .venv environment file which can be activated with the use of following command.
 
 ```
 $ source .venv/bin/activate
-```
-
-If you are a Windows platform, you would activate the virtualenv like this:
-
-```
-% .venv\Scripts\activate.bat
 ```
 
 Once the virtualenv is activated, you can install the required dependencies.
@@ -37,22 +26,25 @@ Once the virtualenv is activated, you can install the required dependencies.
 $ pip install -r requirements.txt
 ```
 
-At this point you can now synthesize the CloudFormation template for this code.
+Since our work is build upon the application stack of sprint2 copy resoucrs folder from sprint3 to sprint4
 
 ```
-$ cdk synth
+$ cp resources ../sprint3/
 ```
 
-To add additional dependencies, for example other CDK libraries, just add
-them to your `setup.py` file and rerun the `pip install -r requirements.txt`
-command.
+Since we are creating a pipeline, we need to deploy the pipeline, it in turn will deploy our application. To that end run
 
-## Useful commands
+```
+$ cdk deploy mumer-Sprint4-PipelineStack
+```
 
- * `cdk ls`          list all stacks in the app
- * `cdk synth`       emits the synthesized CloudFormation template
- * `cdk deploy`      deploy this stack to your default AWS account/region
- * `cdk diff`        compare deployed stack with current state
- * `cdk docs`        open CDK documentation
+Make sure to push code to github before deploying pipleine.
 
-Enjoy!
+## My progress in sprint4
+
+1. Worked on CI/CD pipeline for web health lambda.
+2. Created a pipeline stack and restructured the sprint2 into sprint3: by moving resources from sprint2 to sprint3.
+3. Added different stages in pipeline, CodeSource, CodeBuild, AlphaTesting stage(unit tests), BetaTesting(functional tests), and Prod Stage.
+4. Wrote unit tests to validate individual constructs usage in stack.
+5. Created AWS Alarms in `sprint4/sprint3_stack.py` to monitor lambda real time performance.
+6. Lambda alarms work as a policy, if alarms went off application will rollback to previous version.

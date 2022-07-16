@@ -38,7 +38,7 @@ class Sprint4Stack(Stack):
             "hw_lambda.lambda_handler", lambda_role
         )
         hw_lambda.apply_removal_policy(RemovalPolicy.DESTROY)
-        hw_lambda.add_environment("TABLE_NAME", table.table_name)
+        
 
         # https://docs.aws.amazon.com/cdk/api/v2/python/aws_cdk.aws_events/Schedule.html
         schedule = events_.Schedule.cron(minute="0")
@@ -63,35 +63,35 @@ class Sprint4Stack(Stack):
             self,
             "AlarmNotification"
         )
+        print(topic.topic_arn)
         topic.apply_removal_policy(RemovalPolicy.DESTROY)
-        hw_lambda.add_environment("TOPIC_ARN", topic.topic_arn)
 
-        for url in constants.URLS:
-            dimension = {"URL": url}
+        # for url in constants.URLS:
+        #     dimension = {"URL": url}
 
-            avail_alarm = self.create_alarm(
-                name=f"mumer_appMonitorAlarm_avail_{url}",
-                threshold=1,
-                comparison_operator=cloudwatch_.ComparisonOperator.LESS_THAN_THRESHOLD,
-                metric=self.create_metric(
-                    metric_name=constants.METRIC_AVAILABILITY,
-                    namespace=constants.URL_MONITOR_NAMESPACE,
-                    dimension=dimension
-                )
-            )
-            avail_alarm.add_alarm_action(cw_actions_.SnsAction(topic))
+        #     avail_alarm = self.create_alarm(
+        #         name=f"mumer_appMonitorAlarm_avail_{url}",
+        #         threshold=1,
+        #         comparison_operator=cloudwatch_.ComparisonOperator.LESS_THAN_THRESHOLD,
+        #         metric=self.create_metric(
+        #             metric_name=constants.METRIC_AVAILABILITY,
+        #             namespace=constants.URL_MONITOR_NAMESPACE,
+        #             dimension=dimension
+        #         )
+        #     )
+        #     avail_alarm.add_alarm_action(cw_actions_.SnsAction(topic))
 
-            latency_alarm = self.create_alarm(
-                name=f"mumer_appMonitorAlarm_latency_{url}",
-                threshold=0.2,
-                comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD,
-                metric=self.create_metric(
-                    metric_name=constants.METRIC_AVAILABILITY,
-                    namespace=constants.URL_MONITOR_NAMESPACE,
-                    dimension=dimension
-                )
-            )
-            latency_alarm.add_alarm_action(cw_actions_.SnsAction(topic))
+        #     latency_alarm = self.create_alarm(
+        #         name=f"mumer_appMonitorAlarm_latency_{url}",
+        #         threshold=0.2,
+        #         comparison_operator=cloudwatch_.ComparisonOperator.GREATER_THAN_THRESHOLD,
+        #         metric=self.create_metric(
+        #             metric_name=constants.METRIC_LATENCY,
+        #             namespace=constants.URL_MONITOR_NAMESPACE,
+        #             dimension=dimension
+        #         )
+        #     )
+        #     latency_alarm.add_alarm_action(cw_actions_.SnsAction(topic))
 
         db_lambda = self.create_lambda(
             "DataInRecord",
@@ -171,6 +171,10 @@ class Sprint4Stack(Stack):
         url_table.apply_removal_policy(RemovalPolicy.DESTROY)
 
         rest_api_lambda.add_environment("TABLE_NAME", url_table.table_name)
+        rest_api_lambda.add_environment("TOPIC_ARN", topic.topic_arn)
+
+        hw_lambda.add_environment("TABLE_NAME", url_table.table_name)
+        hw_lambda.add_environment("TOPIC_ARN", topic.topic_arn)
 
         # constructing api gateway abstraction layer on application
         # https://docs.aws.amazon.com/cdk/api/v1/python/aws_cdk.aws_apigateway/LambdaRestApi.html

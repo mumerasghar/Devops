@@ -1,9 +1,12 @@
+from asyncio import constants
 import os
 import logging
 import json
 from urllib import response
 import boto3
 from decimal import Decimal
+from CloudWatch_put_metric import CloudWatchPutMetric
+import constants
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -11,6 +14,7 @@ logger.setLevel(logging.INFO)
 TABLE_NAME = os.environ.get('TABLE_NAME')
 dynamodb = boto3.resource('dynamodb')
 table = dynamodb.Table(TABLE_NAME)
+sns_topic_arn = os.environ["TOPIC_ARN"]
 
 
 class DecimalSerializer(json.JSONEncoder):
@@ -37,6 +41,9 @@ def buildResponse(statusCode, body=None):
 
 
 def post_handler(event):
+    # creating alarms on new url
+    cw = CloudWatchPutMetric()
+
     # extracting data from body of post request
     body = json.loads(event["body"])
     logger.info(type(body))
@@ -50,7 +57,29 @@ def post_handler(event):
         response = table.put_item(
             Item=Item
         )
+        dimension = [{'Name': 'URL', 'Value': body["url"]}]
 
+        # availability alarm
+        # cw.create_alram(
+        #     "mumer_appMonitorAlarm_avail_"+body["url"],
+        #     f"availability alarm for url: {body['url']}",
+        #     constants.METRIC_AVAILABILITY,
+        #     constants.URL_MONITOR_NAMESPACE,
+        #     dimensions=dimension,
+        #     threshold=1,
+        #     sns_topic_arn=sns_topic_arn
+        # )
+
+        # # latency alarm
+        # cw.create_alram(
+        #     "mumer_appMonitorAlarm_latency_"+body["url"],
+        #     f"Latency alarm for url: {body['url']}",
+        #     constants.METRIC_LATENCY,
+        #     constants.URL_MONITOR_NAMESPACE,
+        #     dimensions=dimension,
+        #     threshold=body["threshold"],
+        #     sns_topic_arn=sns_topic_arn
+        # )
         body = {
             "Status": "Success",
             "Item": Item

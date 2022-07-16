@@ -1,86 +1,105 @@
-import datetime
-import urllib3
-import boto3
 import os
-import constants as constants
-import json
-from pathlib import Path
+import datetime
+from urllib import response
+import boto3
+import logging
+import urllib3
+import constants
 from CloudWatch_put_metric import CloudWatchPutMetric
-from dynamodb import DynamoDb
 
-# To create boto3 dynamodb resource
+logger = logging.getLogger()
+logger.setLevel(logging.INFO)
+
+cw = CloudWatchPutMetric()
+table_name = os.environ["TABLE_NAME"]
+
 dynamodb = boto3.resource('dynamodb')
+table = dynamodb.Table(table_name)
+sns_topic_arn = os.environ["TOPIC_ARN"]
+
+def read_urls():
+    response = table.scan()
+    result = response["Items"]
+
+    while "LastEvaluationKey" in response:
+        response = table.scan(
+            ExclusiveStartKey=response['LastEvaluatedKey'])
+        result.extend(response['Items'])
+
+    return result
 
 
 def lambda_handler(event, context):
+    print("Hello world Lmabda")
 
-    watch = CloudWatchPutMetric()
-    db = DynamoDb()
+    values = {}
+    urls = read_urls()
+    print(table_name)
+    logger.info(urls)
 
-    values = dict()
-    table_name = os.environ["TABLE_NAME"]
-    sns_topic_arn = os.environ["TOPIC_ARN"]
+    for ele in urls:
+        url = ele['monitor_url']
+        availbility = getAvailability(url)
+        dimension = [{'Name': 'URL', 'Value': url}]
+        responseAvail = cw.put_data(
+            constants.URL_MONITOR_NAMESPACE,
+            constants.METRIC_AVAILABILITY,
+            dimension,
+            availbility
+        )
 
-    result = db.read_db(table_name)
-
-    print(result)
-    lists_of_urls = result
-
-    for item in result:
-
-        avail = get_availability(item["monitor_url"])
-        latency = get_latency(item["monitor_url"])
+        latency = getLatency(url)
+        responseLatency = cw.put_data(
+            constants.URL_MONITOR_NAMESPACE,
+            constants.METRIC_LATENCY,
+            dimension,
+            latency
+        )
 
         values.update({
-            item["monitor_url"]: {
-                'availability': avail,
-                'latency': latency
+            url: {
+                "availability": availbility,
+                "latency": latency
             }
         })
 
-        threshold = float(item["threshold"])
+        cw.create_alram(
+            "mumer_appMonitorAlarm_avail_"+url,
+            f"availability alarm for url: {url}",
+            constants.METRIC_AVAILABILITY,
+            constants.URL_MONITOR_NAMESPACE,
+            dimensions=dimension,
+            threshold=1,
+            sns_topic_arn=sns_topic_arn
+        )
 
-        dimensions = [
-            {
-                "Name": "URL",
-                "Value": item["monitor_url"]
-            },
-            {
-                "Name": "Region",
-                "Value": constants.Region
-            }]
+        # latency alarm
+        cw.create_alram(
+            "mumer_appMonitorAlarm_latency_"+url,
+            f"Latency alarm for url: {url}",
+            constants.METRIC_LATENCY,
+            constants.URL_MONITOR_NAMESPACE,
+            dimensions=dimension,
+            threshold=float(ele["threshold"]),
+            sns_topic_arn=sns_topic_arn
+        )
 
-        watch.put_data(constants.Name_Space,
-                       constants.Metric_Availability, dimensions, avail)
-        watch.put_data(constants.Name_Space,
-                       constants.Metric_Latency, dimensions, latency)
-
-        watch.create_alram(item["monitor_url"] + "-Latency Alarm",
-                           "Latency Alarm for" + item["monitor_url"],
-                           constants.METRIC_LATENCY,
-                           constants.URL_MONITOR_NAMESPACE,
-                           dimensions,
-                           threshold,
-                           sns_topic_arn,
-                           period=60)
-        print(values)
+    print(values)
     return values
 
 
-def get_availability(url):
+def getAvailability(url):
     http = urllib3.PoolManager()
     response = http.request("GET", url)
-    if response.status == 200:
-        return 1.0
-    else:
-        return 0.0
+    return 1 if response.status == 200 else 0
 
 
-def get_latency(url):
+def getLatency(url):
     http = urllib3.PoolManager()
-    start = datetime.datetime.now()
+    before_time = datetime.datetime.now()
     response = http.request("GET", url)
-    end = datetime.datetime.now()
-    delta = end-start
-    latency_sec = round(delta.microseconds * 0.000001, 6)
-    return latency_sec
+    after_time = datetime.datetime.now()
+    latency = after_time - before_time
+
+    latencySec = round(latency.microseconds * .000001, 6)
+    return latencySec
