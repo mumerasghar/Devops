@@ -13,7 +13,7 @@ def template():
 
 
 def test_lambda_queue_created(template):
-    template.resource_count_is("AWS::Lambda::Function", 2)
+    template.resource_count_is("AWS::Lambda::Function", 3)
 
 
 def test_lambda_scheduler(template):
